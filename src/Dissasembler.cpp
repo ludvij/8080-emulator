@@ -53,13 +53,12 @@ namespace {
 	{
 	#ifdef THROW_ON_UNSUPPORTED_OPCODE
 		throw std::runtime_error("unsupported opcode");
-	#else
+	#endif//THROW_ON_UNSUPPORTED_OPCODE
 	#ifdef NOP_ON_UNSUPPORTED_OPCODE
 		return "NOP";
 	#else
 		return "-";
 	#endif//NOP_ON_UNSUPPORTED_OPCODE
-	#endif//THROW_ON_UNSUPPORTED_OPCODE
 	}
 }
 
