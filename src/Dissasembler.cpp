@@ -38,12 +38,12 @@ namespace {
 		return format("%-7s%s", opcode, argPrefix);
 	}
 
-	std::string makeOpcodeD8(const char* opcode, const char* argPrefix, uint8_t data)
+	std::string makeOpcode2b(const char* opcode, const char* argPrefix, uint8_t data)
 	{
 		return format("%-7s%s$%02x", opcode, argPrefix, data);
 	}
 
-	std::string makeOpcodeD16(const char* opcode, const char* argPrefix, uint8_t dataHigh, uint8_t dataLow)
+	std::string makeOpcode4b(const char* opcode, const char* argPrefix, uint8_t dataHigh, uint8_t dataLow)
 	{
 		return format("%-7s%s$%02x%02x", opcode, argPrefix, dataHigh, dataLow);
 	}
@@ -75,12 +75,12 @@ OpcodeData dissasemble::dissasemble(uint8_t* codeBuffer, int pc)
 	switch(*code)
 	{
 		case 0x00: strOpcode = "NOP"; break;
-		case 0x01: strOpcode = makeOpcodeD16("LXI","B, #", code[2], code[1]); opbytes=3; break;
+		case 0x01: strOpcode = makeOpcode4b("LXI","B, #", code[2], code[1]); opbytes=3; break;
 		case 0x02: strOpcode = makeOpcode("STAX", "B"); break;
 		case 0x03: strOpcode = makeOpcode("INX", "B"); break;
 		case 0x04: strOpcode = makeOpcode("INR", "B"); break;
 		case 0x05: strOpcode = makeOpcode("DCR", "B"); break;
-		case 0x06: strOpcode = makeOpcodeD8("MVI","B, #0x", code[1]); opbytes=2; break;
+		case 0x06: strOpcode = makeOpcode2b("MVI","B, #0x", code[1]); opbytes=2; break;
 		case 0x07: strOpcode = "RLC"; break;
 
 		case 0x08: strOpcode = opcodeNotFound(); break;
@@ -89,16 +89,16 @@ OpcodeData dissasemble::dissasemble(uint8_t* codeBuffer, int pc)
 		case 0x0B: strOpcode = makeOpcode("DCX", "B"); break;
 		case 0x0C: strOpcode = makeOpcode("INR", "C"); break;
 		case 0x0D: strOpcode = makeOpcode("DCR", "C"); break;
-		case 0x0E: strOpcode = makeOpcodeD8("MVI", "C, #0x", code[1]); opbytes=2; break;
+		case 0x0E: strOpcode = makeOpcode2b("MVI", "C, #0x", code[1]); opbytes=2; break;
 		case 0x0F: strOpcode = "RRC"; break;
 
 		case 0x10: strOpcode = opcodeNotFound();
-		case 0x11: strOpcode = makeOpcodeD16("LXI", "D, #", code[2], code[1]); opbytes=3; break;
+		case 0x11: strOpcode = makeOpcode4b("LXI", "D, #", code[2], code[1]); opbytes=3; break;
 		case 0x12: strOpcode = makeOpcode("STAX", "D"); break;
 		case 0x13: strOpcode = makeOpcode("INX", "D"); break;
 		case 0x14: strOpcode = makeOpcode("INR", "D"); break;
 		case 0x15: strOpcode = makeOpcode("DCR", "D"); break;
-		case 0x16: strOpcode = makeOpcodeD8("MVI", "D, #0x", code[1]); opbytes=2; break;
+		case 0x16: strOpcode = makeOpcode2b("MVI", "D, #0x", code[1]); opbytes=2; break;
 		case 0x17: strOpcode = "RAL"; break;
 
 		case 0x18: strOpcode = opcodeNotFound(); break;
@@ -107,43 +107,43 @@ OpcodeData dissasemble::dissasemble(uint8_t* codeBuffer, int pc)
 		case 0x1B: strOpcode = makeOpcode("DCX", "D"); break;
 		case 0x1C: strOpcode = makeOpcode("INR", "E"); break;
 		case 0x1D: strOpcode = makeOpcode("DCR", "E"); break;
-		case 0x1E: strOpcode = makeOpcodeD8("MVI", "E, #0x", code[1]); opbytes=2; break;
+		case 0x1E: strOpcode = makeOpcode2b("MVI", "E, #0x", code[1]); opbytes=2; break;
 		case 0x1F: strOpcode = "RAR"; break;
 
 		case 0x20: strOpcode = opcodeNotFound(); break;
-		case 0x21: strOpcode = makeOpcodeD16("LXI", "H, #", code[2], code[1]); opbytes=3; break;
-		case 0x22: strOpcode = makeOpcodeD16("SHLD", "", code[2], code[1]); opbytes=3; break;
+		case 0x21: strOpcode = makeOpcode4b("LXI", "H, #", code[2], code[1]); opbytes=3; break;
+		case 0x22: strOpcode = makeOpcode4b("SHLD", "", code[2], code[1]); opbytes=3; break;
 		case 0x23: strOpcode = makeOpcode("INX", "H"); break;
 		case 0x24: strOpcode = makeOpcode("INR", "H"); break;
 		case 0x25: strOpcode = makeOpcode("DCR", "H"); break;
-		case 0x26: strOpcode = makeOpcodeD8("MVI", "H, #0x", code[1]); opbytes=2; break;
+		case 0x26: strOpcode = makeOpcode2b("MVI", "H, #0x", code[1]); opbytes=2; break;
 		case 0x27: strOpcode = "DAA"; break;
 
 		case 0x28: strOpcode = opcodeNotFound(); break;
 		case 0x29: strOpcode = makeOpcode("DAD", "H"); break;
-		case 0x2A: strOpcode = makeOpcodeD16("LHLD", "", code[2], code[1]); opbytes=3; break;
+		case 0x2A: strOpcode = makeOpcode4b("LHLD", "", code[2], code[1]); opbytes=3; break;
 		case 0x2B: strOpcode = makeOpcode("DCX", "H"); break;
 		case 0x2C: strOpcode = makeOpcode("INR", "L"); break;
 		case 0x2D: strOpcode = makeOpcode("DCR", "L"); break;
-		case 0x2E: strOpcode = makeOpcodeD8("MVI", "L, #0x", code[1]); opbytes=2; break;
+		case 0x2E: strOpcode = makeOpcode2b("MVI", "L, #0x", code[1]); opbytes=2; break;
 		case 0x2F: strOpcode = "CMA"; break;
 
 		case 0x30: strOpcode = opcodeNotFound(); break;
-		case 0x31: strOpcode = makeOpcodeD16("LXI","SP, #", code[2], code[1]); opbytes=3; break;
-		case 0x32: strOpcode = makeOpcodeD16("STA", "", code[2], code[1]); opbytes=3; break;
+		case 0x31: strOpcode = makeOpcode4b("LXI","SP, #", code[2], code[1]); opbytes=3; break;
+		case 0x32: strOpcode = makeOpcode4b("STA", "", code[2], code[1]); opbytes=3; break;
 		case 0x33: strOpcode = makeOpcode("INX", "SP"); break;
 		case 0x34: strOpcode = makeOpcode("INR", "M"); break;
 		case 0x35: strOpcode = makeOpcode("DCR", "M"); break;
-		case 0x36: strOpcode = makeOpcodeD8("MVI","M, #0x", code[1]); opbytes=2; break;
+		case 0x36: strOpcode = makeOpcode2b("MVI","M, #0x", code[1]); opbytes=2; break;
 		case 0x37: strOpcode = "STC"; break;
 
 		case 0x38: strOpcode = opcodeNotFound(); break;
 		case 0x39: strOpcode = makeOpcode("DAD", "SP"); break;
-		case 0x3A: strOpcode = makeOpcodeD16("LDA", "", code[2], code[1]); opbytes=3; break;
+		case 0x3A: strOpcode = makeOpcode4b("LDA", "", code[2], code[1]); opbytes=3; break;
 		case 0x3B: strOpcode = makeOpcode("DCX", "SP"); break;
 		case 0x3C: strOpcode = makeOpcode("INR", "A"); break;
 		case 0x3D: strOpcode = makeOpcode("DCR", "A"); break;
-		case 0x3E: strOpcode = makeOpcodeD8("MVI", "A, #0x", code[1]); opbytes=2; break;
+		case 0x3E: strOpcode = makeOpcode2b("MVI", "A, #0x", code[1]); opbytes=2; break;
 		case 0x3F: strOpcode = "CMC"; break;
 
 		case 0x40: strOpcode = makeOpcode("MOV", "B, B"); break;
@@ -292,74 +292,74 @@ OpcodeData dissasemble::dissasemble(uint8_t* codeBuffer, int pc)
 
 		case 0xC0: strOpcode = "RNZ"; break;
 		case 0xC1: strOpcode = makeOpcode("POP", "B"); break;
-		case 0xC2: strOpcode = makeOpcodeD16("JNZ", "", code[2], code[1]); opbytes=3; break;
-		case 0xC3: strOpcode = makeOpcodeD16("JMP", "", code[2], code[1]); opbytes=3; break;
-		case 0xC4: strOpcode = makeOpcodeD16("CNZ", "", code[2], code[1]); opbytes=3; break;
+		case 0xC2: strOpcode = makeOpcode4b("JNZ", "", code[2], code[1]); opbytes=3; break;
+		case 0xC3: strOpcode = makeOpcode4b("JMP", "", code[2], code[1]); opbytes=3; break;
+		case 0xC4: strOpcode = makeOpcode4b("CNZ", "", code[2], code[1]); opbytes=3; break;
 		case 0xC5: strOpcode = makeOpcode("PUSH", "B"); break;
-		case 0xC6: strOpcode = makeOpcodeD8("ADI", "#", code[1]); opbytes=2; break;
+		case 0xC6: strOpcode = makeOpcode2b("ADI", "#", code[1]); opbytes=2; break;
 		case 0xC7: strOpcode = makeOpcode("RST", "0"); break;
 
 		case 0xC8: strOpcode = "RZ"; break;
 		case 0xC9: strOpcode = "RET"; break;
-		case 0xCA: strOpcode = makeOpcodeD16("JZ", "", code[2], code[1]); opbytes=3; break;
+		case 0xCA: strOpcode = makeOpcode4b("JZ", "", code[2], code[1]); opbytes=3; break;
 		case 0xCB: strOpcode = opcodeNotFound(); break;
-		case 0xCC: strOpcode = makeOpcodeD16("CZ", "", code[2], code[1]); opbytes=3; break;
-		case 0xCD: strOpcode = makeOpcodeD16("CALL", "", code[2], code[1]); opbytes=3; break;
-		case 0xCE: strOpcode = makeOpcodeD8("ACI", "#", code[1]); opbytes=2; break;
+		case 0xCC: strOpcode = makeOpcode4b("CZ", "", code[2], code[1]); opbytes=3; break;
+		case 0xCD: strOpcode = makeOpcode4b("CALL", "", code[2], code[1]); opbytes=3; break;
+		case 0xCE: strOpcode = makeOpcode2b("ACI", "#", code[1]); opbytes=2; break;
 		case 0xCF: strOpcode = makeOpcode("RST", "1"); break;
 
 		case 0xD0: strOpcode = "RNC"; break;
 		case 0xD1: strOpcode = makeOpcode("POP", "D"); break;
-		case 0xD2: strOpcode = makeOpcodeD16("JNC", "", code[2], code[1]); opbytes=3; break;
-		case 0xD3: strOpcode = makeOpcodeD8("OUT", "#", code[1]); opbytes=2; break;
-		case 0xD4: strOpcode = makeOpcodeD16("CNC", "", code[2], code[1]); opbytes=3; break;
+		case 0xD2: strOpcode = makeOpcode4b("JNC", "", code[2], code[1]); opbytes=3; break;
+		case 0xD3: strOpcode = makeOpcode2b("OUT", "#", code[1]); opbytes=2; break;
+		case 0xD4: strOpcode = makeOpcode4b("CNC", "", code[2], code[1]); opbytes=3; break;
 		case 0xD5: strOpcode = makeOpcode("PUSH", "D"); break;
-		case 0xD6: strOpcode = makeOpcodeD8("SUI", "#", code[1]); opbytes=2; break;
+		case 0xD6: strOpcode = makeOpcode2b("SUI", "#", code[1]); opbytes=2; break;
 		case 0xD7: strOpcode = makeOpcode("RST", "2"); break;
 		
 		case 0xD8: strOpcode = "RC"; break;
 		case 0xD9: strOpcode = opcodeNotFound(); break;
-		case 0xDA: strOpcode = makeOpcodeD16("JC", "", code[2], code[1]); opbytes=3; break;
-		case 0xDB: strOpcode = makeOpcodeD8("IN", "#", code[1]); opbytes=2; break;
-		case 0xDC: strOpcode = makeOpcodeD16("CC", "", code[2], code[1]); opbytes=3; break;
+		case 0xDA: strOpcode = makeOpcode4b("JC", "", code[2], code[1]); opbytes=3; break;
+		case 0xDB: strOpcode = makeOpcode2b("IN", "#", code[1]); opbytes=2; break;
+		case 0xDC: strOpcode = makeOpcode4b("CC", "", code[2], code[1]); opbytes=3; break;
 		case 0xDD: strOpcode = opcodeNotFound(); break;
-		case 0xDE: strOpcode = makeOpcodeD8("SBI", "#", code[1]); opbytes=2; break;
+		case 0xDE: strOpcode = makeOpcode2b("SBI", "#", code[1]); opbytes=2; break;
 		case 0xDF: strOpcode = makeOpcode("RST", "3"); break;
 
 		case 0xE0: strOpcode = "RPO"; break;
 		case 0xE1: strOpcode = makeOpcode("POP", "H"); break;
-		case 0xE2: strOpcode = makeOpcodeD16("JPO", "", code[2], code[1]); opbytes=3; break;
+		case 0xE2: strOpcode = makeOpcode4b("JPO", "", code[2], code[1]); opbytes=3; break;
 		case 0xE3: strOpcode = "XTHL"; break;
-		case 0xE4: strOpcode = makeOpcodeD16("CPO", "", code[2], code[1]); opbytes=3; break;
+		case 0xE4: strOpcode = makeOpcode4b("CPO", "", code[2], code[1]); opbytes=3; break;
 		case 0xE5: strOpcode = makeOpcode("PUSH", "H"); break;
-		case 0xE6: strOpcode = makeOpcodeD8("ANI", "#", code[1]); opbytes=2; break;
+		case 0xE6: strOpcode = makeOpcode2b("ANI", "#", code[1]); opbytes=2; break;
 		case 0xE7: strOpcode = makeOpcode("RST", "4"); break;
 		
 		case 0xE8: strOpcode = "RPE"; break;
 		case 0xE9: strOpcode = "PCHL"; break;
-		case 0xEA: strOpcode = makeOpcodeD16("JPE", "", code[2], code[1]); opbytes=3; break;
+		case 0xEA: strOpcode = makeOpcode4b("JPE", "", code[2], code[1]); opbytes=3; break;
 		case 0xEB: strOpcode = "XCHG"; break;
-		case 0xEC: strOpcode = makeOpcodeD16("CPE", "", code[2], code[1]); opbytes=3; break;
+		case 0xEC: strOpcode = makeOpcode4b("CPE", "", code[2], code[1]); opbytes=3; break;
 		case 0xED: strOpcode = opcodeNotFound(); break;
-		case 0xEE: strOpcode = makeOpcodeD8("XRI", "#", code[1]); opbytes=2; break;
+		case 0xEE: strOpcode = makeOpcode2b("XRI", "#", code[1]); opbytes=2; break;
 		case 0xEF: strOpcode = makeOpcode("RST", "5"); break;
 
 		case 0xF0: strOpcode = "RP"; break;
 		case 0xF1: strOpcode = makeOpcode("POP", "PSW"); break;
-		case 0xF2: strOpcode = makeOpcodeD16("JP", "", code[2], code[1]); opbytes=3; break;
+		case 0xF2: strOpcode = makeOpcode4b("JP", "", code[2], code[1]); opbytes=3; break;
 		case 0xF3: strOpcode = "DI"; break;
-		case 0xF4: strOpcode = makeOpcodeD16("CP", "", code[2], code[1]); opbytes=3; break;
+		case 0xF4: strOpcode = makeOpcode4b("CP", "", code[2], code[1]); opbytes=3; break;
 		case 0xF5: strOpcode = makeOpcode("PUSH", "PSW"); break;
-		case 0xF6: strOpcode = makeOpcodeD8("ORI", "#", code[1]); opbytes=2; break;
+		case 0xF6: strOpcode = makeOpcode2b("ORI", "#", code[1]); opbytes=2; break;
 		case 0xF7: strOpcode = makeOpcode("RST", "6"); break;
 		
 		case 0xF8: strOpcode = "RM"; break;
 		case 0xF9: strOpcode = "SPHL"; break;
-		case 0xFA: strOpcode = makeOpcodeD16("JM", "", code[2], code[1]); opbytes=3; break;
+		case 0xFA: strOpcode = makeOpcode4b("JM", "", code[2], code[1]); opbytes=3; break;
 		case 0xFB: strOpcode = "EI"; break;
-		case 0xFC: strOpcode = makeOpcodeD16("CM", "", code[2], code[1]); opbytes=3; break;
+		case 0xFC: strOpcode = makeOpcode4b("CM", "", code[2], code[1]); opbytes=3; break;
 		case 0xFD: strOpcode = opcodeNotFound(); break;
-		case 0xFE: strOpcode = makeOpcodeD8("CPI", "#", code[1]); opbytes=2; break;
+		case 0xFE: strOpcode = makeOpcode2b("CPI", "#", code[1]); opbytes=2; break;
 		case 0xFF: strOpcode = makeOpcode("RST", "7"); break;
 
 		default  : strOpcode = opcodeNotFound();
