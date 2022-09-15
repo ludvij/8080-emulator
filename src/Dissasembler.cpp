@@ -1,13 +1,12 @@
-#include <cstdio>
+#include "Dissasembler.h"
 #include <cstdint>
 #include <stdexcept>
-#include "Dissasembler.h"
+#include <iostream>
+#include <iomanip>
 
 #if defined DEBUG || defined _DEBUG
-	#define LOG_TRACE_FMT(x, y) printf(x, y)
-	#define LOG_TRACE(x) printf(x)
+	#define LOG_TRACE(x) std::cout << x;
 #else
-	#define LOG_TRACE_FMT(x, y)
 	#define LOG_TRACE(x)
 #endif
 
@@ -24,7 +23,7 @@ namespace {
 		// create buffer
 		char* buffer = new char[size];
 		// fill buffer
-		std::snprintf(buffer.get(), size, format.c_str(), args ...);
+		std::snprintf(buffer, size, format.c_str(), args ...);
 
 		// convert char* to std string
 		std::string res = std::string(buffer, buffer + size - 1);
@@ -33,338 +32,348 @@ namespace {
 		return res;
 	}
 
-	std::string makeOpcode(const char* opcode, const char* argPrefix) 
+	OpcodeData makeOpcode(const char* opcode, const char* argPrefix) 
 	{
-		return format("%-7s%s", opcode, argPrefix);
+		std::string symbol = format("%-7s%s", opcode, argPrefix);
+		return {symbol, 1};
 	}
 
-	std::string makeOpcode2b(const char* opcode, const char* argPrefix, uint8_t data)
+	OpcodeData makeOpcode2b(const char* opcode, const char* argPrefix, uint8_t data)
 	{
-		return format("%-7s%s$%02x", opcode, argPrefix, data);
+		std::string symbol = format("%-7s%s$%02x", opcode, argPrefix, data);
+		return {symbol, 2};
 	}
 
-	std::string makeOpcode4b(const char* opcode, const char* argPrefix, uint8_t dataHigh, uint8_t dataLow)
+	OpcodeData makeOpcode4b(const char* opcode, const char* argPrefix, uint8_t dataHigh, uint8_t dataLow)
 	{
-		return format("%-7s%s$%02x%02x", opcode, argPrefix, dataHigh, dataLow);
+		std::string symbol = format("%-7s%s$%02x%02x", opcode, argPrefix, dataHigh, dataLow);
+		return {symbol, 3};
 	}
 
 
-	std::string opcodeNotFound()
+	OpcodeData opcodeNotFound()
 	{
 	#ifdef THROW_ON_UNSUPPORTED_OPCODE
 		throw std::runtime_error("unsupported opcode");
 	#endif//THROW_ON_UNSUPPORTED_OPCODE
 	#ifdef NOP_ON_UNSUPPORTED_OPCODE
-		return "NOP";
+		return {"NOP", 1};
 	#else
-		return "-";
+		return {"-", 1};
 	#endif//NOP_ON_UNSUPPORTED_OPCODE
 	}
 }
 
 
-OpcodeData dissasemble::dissasemble(uint8_t* codeBuffer, int pc)
+OpcodeData dissasemble::dissasemble(std::vector<uint8_t>& code, int pc)
 {
-	uint8_t* code = &codeBuffer[pc];
-	uint16_t opbytes = 1;
-	LOG_TRACE("%04x ", pc);
 
-	std::string strOpcode;
+	OpcodeData opcode;
 
-	switch(*code)
+	switch(code[pc])
 	{
-		case 0x00: strOpcode = "NOP"; break;
-		case 0x01: strOpcode = makeOpcode4b("LXI","B, #", code[2], code[1]); opbytes=3; break;
-		case 0x02: strOpcode = makeOpcode("STAX", "B"); break;
-		case 0x03: strOpcode = makeOpcode("INX", "B"); break;
-		case 0x04: strOpcode = makeOpcode("INR", "B"); break;
-		case 0x05: strOpcode = makeOpcode("DCR", "B"); break;
-		case 0x06: strOpcode = makeOpcode2b("MVI","B, #0x", code[1]); opbytes=2; break;
-		case 0x07: strOpcode = "RLC"; break;
+		case 0x00: opcode = {"NOP", 1}; break;
+		case 0x01: opcode = makeOpcode4b("LXI","B, #", code[pc + 2], code[pc + 1]); break;
+		case 0x02: opcode = makeOpcode("STAX", "B"); break;
+		case 0x03: opcode = makeOpcode("INX", "B"); break;
+		case 0x04: opcode = makeOpcode("INR", "B"); break;
+		case 0x05: opcode = makeOpcode("DCR", "B"); break;
+		case 0x06: opcode = makeOpcode2b("MVI","B, #", code[pc + 1]); break;
+		case 0x07: opcode = {"RLC", 1}; break;
 
-		case 0x08: strOpcode = opcodeNotFound(); break;
-		case 0x09: strOpcode = makeOpcode("DAD", "B"); break;
-		case 0x0A: strOpcode = makeOpcode("LDAX", "B"); break;
-		case 0x0B: strOpcode = makeOpcode("DCX", "B"); break;
-		case 0x0C: strOpcode = makeOpcode("INR", "C"); break;
-		case 0x0D: strOpcode = makeOpcode("DCR", "C"); break;
-		case 0x0E: strOpcode = makeOpcode2b("MVI", "C, #0x", code[1]); opbytes=2; break;
-		case 0x0F: strOpcode = "RRC"; break;
+		case 0x08: opcode = opcodeNotFound(); break;
+		case 0x09: opcode = makeOpcode("DAD", "B"); break;
+		case 0x0A: opcode = makeOpcode("LDAX", "B"); break;
+		case 0x0B: opcode = makeOpcode("DCX", "B"); break;
+		case 0x0C: opcode = makeOpcode("INR", "C"); break;
+		case 0x0D: opcode = makeOpcode("DCR", "C"); break;
+		case 0x0E: opcode = makeOpcode2b("MVI", "C, #", code[pc + 1]); break;
+		case 0x0F: opcode = {"RRC", 1}; break;
 
-		case 0x10: strOpcode = opcodeNotFound();
-		case 0x11: strOpcode = makeOpcode4b("LXI", "D, #", code[2], code[1]); opbytes=3; break;
-		case 0x12: strOpcode = makeOpcode("STAX", "D"); break;
-		case 0x13: strOpcode = makeOpcode("INX", "D"); break;
-		case 0x14: strOpcode = makeOpcode("INR", "D"); break;
-		case 0x15: strOpcode = makeOpcode("DCR", "D"); break;
-		case 0x16: strOpcode = makeOpcode2b("MVI", "D, #0x", code[1]); opbytes=2; break;
-		case 0x17: strOpcode = "RAL"; break;
+		case 0x10: opcode = opcodeNotFound(); break;
+		case 0x11: opcode = makeOpcode4b("LXI", "D, #", code[pc + 2], code[pc + 1]); break;
+		case 0x12: opcode = makeOpcode("STAX", "D"); break;
+		case 0x13: opcode = makeOpcode("INX", "D"); break;
+		case 0x14: opcode = makeOpcode("INR", "D"); break;
+		case 0x15: opcode = makeOpcode("DCR", "D"); break;
+		case 0x16: opcode = makeOpcode2b("MVI", "D, #", code[pc + 1]); break;
+		case 0x17: opcode = {"RAL", 1}; break;
 
-		case 0x18: strOpcode = opcodeNotFound(); break;
-		case 0x19: strOpcode = makeOpcode("DAD", "D"); break;
-		case 0x1A: strOpcode = makeOpcode("LDAX", "D"); break;
-		case 0x1B: strOpcode = makeOpcode("DCX", "D"); break;
-		case 0x1C: strOpcode = makeOpcode("INR", "E"); break;
-		case 0x1D: strOpcode = makeOpcode("DCR", "E"); break;
-		case 0x1E: strOpcode = makeOpcode2b("MVI", "E, #0x", code[1]); opbytes=2; break;
-		case 0x1F: strOpcode = "RAR"; break;
+		case 0x18: opcode = opcodeNotFound(); break;
+		case 0x19: opcode = makeOpcode("DAD", "D"); break;
+		case 0x1A: opcode = makeOpcode("LDAX", "D"); break;
+		case 0x1B: opcode = makeOpcode("DCX", "D"); break;
+		case 0x1C: opcode = makeOpcode("INR", "E"); break;
+		case 0x1D: opcode = makeOpcode("DCR", "E"); break;
+		case 0x1E: opcode = makeOpcode2b("MVI", "E, #", code[pc + 1]); break;
+		case 0x1F: opcode = {"RAR", 1}; break;
 
-		case 0x20: strOpcode = opcodeNotFound(); break;
-		case 0x21: strOpcode = makeOpcode4b("LXI", "H, #", code[2], code[1]); opbytes=3; break;
-		case 0x22: strOpcode = makeOpcode4b("SHLD", "", code[2], code[1]); opbytes=3; break;
-		case 0x23: strOpcode = makeOpcode("INX", "H"); break;
-		case 0x24: strOpcode = makeOpcode("INR", "H"); break;
-		case 0x25: strOpcode = makeOpcode("DCR", "H"); break;
-		case 0x26: strOpcode = makeOpcode2b("MVI", "H, #0x", code[1]); opbytes=2; break;
-		case 0x27: strOpcode = "DAA"; break;
+		case 0x20: opcode = opcodeNotFound(); break;
+		case 0x21: opcode = makeOpcode4b("LXI", "H, #", code[pc + 2], code[pc + 1]); break;
+		case 0x22: opcode = makeOpcode4b("SHLD", "", code[pc + 2], code[pc + 1]); break;
+		case 0x23: opcode = makeOpcode("INX", "H"); break;
+		case 0x24: opcode = makeOpcode("INR", "H"); break;
+		case 0x25: opcode = makeOpcode("DCR", "H"); break;
+		case 0x26: opcode = makeOpcode2b("MVI", "H, #", code[pc + 1]); break;
+		case 0x27: opcode = {"DAA", 1}; break;
 
-		case 0x28: strOpcode = opcodeNotFound(); break;
-		case 0x29: strOpcode = makeOpcode("DAD", "H"); break;
-		case 0x2A: strOpcode = makeOpcode4b("LHLD", "", code[2], code[1]); opbytes=3; break;
-		case 0x2B: strOpcode = makeOpcode("DCX", "H"); break;
-		case 0x2C: strOpcode = makeOpcode("INR", "L"); break;
-		case 0x2D: strOpcode = makeOpcode("DCR", "L"); break;
-		case 0x2E: strOpcode = makeOpcode2b("MVI", "L, #0x", code[1]); opbytes=2; break;
-		case 0x2F: strOpcode = "CMA"; break;
+		case 0x28: opcode = opcodeNotFound(); break;
+		case 0x29: opcode = makeOpcode("DAD", "H"); break;
+		case 0x2A: opcode = makeOpcode4b("LHLD", "", code[pc + 2], code[pc + 1]); break;
+		case 0x2B: opcode = makeOpcode("DCX", "H"); break;
+		case 0x2C: opcode = makeOpcode("INR", "L"); break;
+		case 0x2D: opcode = makeOpcode("DCR", "L"); break;
+		case 0x2E: opcode = makeOpcode2b("MVI", "L, #", code[pc + 1]); break;
+		case 0x2F: opcode = {"CMA", 1}; break;
 
-		case 0x30: strOpcode = opcodeNotFound(); break;
-		case 0x31: strOpcode = makeOpcode4b("LXI","SP, #", code[2], code[1]); opbytes=3; break;
-		case 0x32: strOpcode = makeOpcode4b("STA", "", code[2], code[1]); opbytes=3; break;
-		case 0x33: strOpcode = makeOpcode("INX", "SP"); break;
-		case 0x34: strOpcode = makeOpcode("INR", "M"); break;
-		case 0x35: strOpcode = makeOpcode("DCR", "M"); break;
-		case 0x36: strOpcode = makeOpcode2b("MVI","M, #0x", code[1]); opbytes=2; break;
-		case 0x37: strOpcode = "STC"; break;
+		case 0x30: opcode = opcodeNotFound(); break;
+		case 0x31: opcode = makeOpcode4b("LXI","SP, #", code[pc + 2], code[pc + 1]); break;
+		case 0x32: opcode = makeOpcode4b("STA", "", code[pc + 2], code[pc + 1]); break;
+		case 0x33: opcode = makeOpcode("INX", "SP"); break;
+		case 0x34: opcode = makeOpcode("INR", "M"); break;
+		case 0x35: opcode = makeOpcode("DCR", "M"); break;
+		case 0x36: opcode = makeOpcode2b("MVI","M, #", code[pc + 1]); break;
+		case 0x37: opcode = {"STC", 1}; break;
 
-		case 0x38: strOpcode = opcodeNotFound(); break;
-		case 0x39: strOpcode = makeOpcode("DAD", "SP"); break;
-		case 0x3A: strOpcode = makeOpcode4b("LDA", "", code[2], code[1]); opbytes=3; break;
-		case 0x3B: strOpcode = makeOpcode("DCX", "SP"); break;
-		case 0x3C: strOpcode = makeOpcode("INR", "A"); break;
-		case 0x3D: strOpcode = makeOpcode("DCR", "A"); break;
-		case 0x3E: strOpcode = makeOpcode2b("MVI", "A, #0x", code[1]); opbytes=2; break;
-		case 0x3F: strOpcode = "CMC"; break;
+		case 0x38: opcode = opcodeNotFound(); break;
+		case 0x39: opcode = makeOpcode("DAD", "SP"); break;
+		case 0x3A: opcode = makeOpcode4b("LDA", "", code[pc + 2], code[pc + 1]); break;
+		case 0x3B: opcode = makeOpcode("DCX", "SP"); break;
+		case 0x3C: opcode = makeOpcode("INR", "A"); break;
+		case 0x3D: opcode = makeOpcode("DCR", "A"); break;
+		case 0x3E: opcode = makeOpcode2b("MVI", "A, #", code[pc + 1]); break;
+		case 0x3F: opcode = {"CMC", 1}; break;
 
-		case 0x40: strOpcode = makeOpcode("MOV", "B, B"); break;
-		case 0x41: strOpcode = makeOpcode("MOV", "B, C"); break;
-		case 0x42: strOpcode = makeOpcode("MOV", "B, D"); break;
-		case 0x43: strOpcode = makeOpcode("MOV", "B, E"); break;
-		case 0x44: strOpcode = makeOpcode("MOV", "B, H"); break;
-		case 0x45: strOpcode = makeOpcode("MOV", "B, L"); break;
-		case 0x46: strOpcode = makeOpcode("MOV", "B, M"); break;
-		case 0x47: strOpcode = makeOpcode("MOV", "B, A"); break;
+		case 0x40: opcode = makeOpcode("MOV", "B, B"); break;
+		case 0x41: opcode = makeOpcode("MOV", "B, C"); break;
+		case 0x42: opcode = makeOpcode("MOV", "B, D"); break;
+		case 0x43: opcode = makeOpcode("MOV", "B, E"); break;
+		case 0x44: opcode = makeOpcode("MOV", "B, H"); break;
+		case 0x45: opcode = makeOpcode("MOV", "B, L"); break;
+		case 0x46: opcode = makeOpcode("MOV", "B, M"); break;
+		case 0x47: opcode = makeOpcode("MOV", "B, A"); break;
 
-		case 0x48: strOpcode = makeOpcode("MOV", "C, B"); break;
-		case 0x49: strOpcode = makeOpcode("MOV", "C, C"); break;
-		case 0x4A: strOpcode = makeOpcode("MOV", "C, D"); break;
-		case 0x4B: strOpcode = makeOpcode("MOV", "C, E"); break;
-		case 0x4C: strOpcode = makeOpcode("MOV", "C, H"); break;
-		case 0x4D: strOpcode = makeOpcode("MOV", "C, L"); break;
-		case 0x4E: strOpcode = makeOpcode("MOV", "C, M"); break;
-		case 0x4F: strOpcode = makeOpcode("MOV", "C, A"); break;
+		case 0x48: opcode = makeOpcode("MOV", "C, B"); break;
+		case 0x49: opcode = makeOpcode("MOV", "C, C"); break;
+		case 0x4A: opcode = makeOpcode("MOV", "C, D"); break;
+		case 0x4B: opcode = makeOpcode("MOV", "C, E"); break;
+		case 0x4C: opcode = makeOpcode("MOV", "C, H"); break;
+		case 0x4D: opcode = makeOpcode("MOV", "C, L"); break;
+		case 0x4E: opcode = makeOpcode("MOV", "C, M"); break;
+		case 0x4F: opcode = makeOpcode("MOV", "C, A"); break;
 
-		case 0x50: strOpcode = makeOpcode("MOV", "D, B"); break;
-		case 0x51: strOpcode = makeOpcode("MOV", "D, C"); break;
-		case 0x52: strOpcode = makeOpcode("MOV", "D, D"); break;
-		case 0x53: strOpcode = makeOpcode("MOV", "D, E"); break;
-		case 0x54: strOpcode = makeOpcode("MOV", "D, H"); break;
-		case 0x55: strOpcode = makeOpcode("MOV", "D, L"); break;
-		case 0x56: strOpcode = makeOpcode("MOV", "D, M"); break;
-		case 0x57: strOpcode = makeOpcode("MOV", "D, A"); break;
+		case 0x50: opcode = makeOpcode("MOV", "D, B"); break;
+		case 0x51: opcode = makeOpcode("MOV", "D, C"); break;
+		case 0x52: opcode = makeOpcode("MOV", "D, D"); break;
+		case 0x53: opcode = makeOpcode("MOV", "D, E"); break;
+		case 0x54: opcode = makeOpcode("MOV", "D, H"); break;
+		case 0x55: opcode = makeOpcode("MOV", "D, L"); break;
+		case 0x56: opcode = makeOpcode("MOV", "D, M"); break;
+		case 0x57: opcode = makeOpcode("MOV", "D, A"); break;
 		
-		case 0x58: strOpcode = makeOpcode("MOV", "E, B"); break;
-		case 0x59: strOpcode = makeOpcode("MOV", "E, C"); break;
-		case 0x5A: strOpcode = makeOpcode("MOV", "E, D"); break;
-		case 0x5B: strOpcode = makeOpcode("MOV", "E, E"); break;
-		case 0x5C: strOpcode = makeOpcode("MOV", "E, H"); break;
-		case 0x5D: strOpcode = makeOpcode("MOV", "E, L"); break;
-		case 0x5E: strOpcode = makeOpcode("MOV", "E, M"); break;
-		case 0x5F: strOpcode = makeOpcode("MOV", "E, A"); break;
+		case 0x58: opcode = makeOpcode("MOV", "E, B"); break;
+		case 0x59: opcode = makeOpcode("MOV", "E, C"); break;
+		case 0x5A: opcode = makeOpcode("MOV", "E, D"); break;
+		case 0x5B: opcode = makeOpcode("MOV", "E, E"); break;
+		case 0x5C: opcode = makeOpcode("MOV", "E, H"); break;
+		case 0x5D: opcode = makeOpcode("MOV", "E, L"); break;
+		case 0x5E: opcode = makeOpcode("MOV", "E, M"); break;
+		case 0x5F: opcode = makeOpcode("MOV", "E, A"); break;
 
-		case 0x60: strOpcode = makeOpcode("MOV", "H, B"); break;
-		case 0x61: strOpcode = makeOpcode("MOV", "H, C"); break;
-		case 0x62: strOpcode = makeOpcode("MOV", "H, D"); break;
-		case 0x63: strOpcode = makeOpcode("MOV", "H, E"); break;
-		case 0x64: strOpcode = makeOpcode("MOV", "H, H"); break;
-		case 0x65: strOpcode = makeOpcode("MOV", "H, L"); break;
-		case 0x66: strOpcode = makeOpcode("MOV", "H, M"); break;
-		case 0x67: strOpcode = makeOpcode("MOV", "H, A"); break;
+		case 0x60: opcode = makeOpcode("MOV", "H, B"); break;
+		case 0x61: opcode = makeOpcode("MOV", "H, C"); break;
+		case 0x62: opcode = makeOpcode("MOV", "H, D"); break;
+		case 0x63: opcode = makeOpcode("MOV", "H, E"); break;
+		case 0x64: opcode = makeOpcode("MOV", "H, H"); break;
+		case 0x65: opcode = makeOpcode("MOV", "H, L"); break;
+		case 0x66: opcode = makeOpcode("MOV", "H, M"); break;
+		case 0x67: opcode = makeOpcode("MOV", "H, A"); break;
 		
-		case 0x68: strOpcode = makeOpcode("MOV", "L, B"); break;
-		case 0x69: strOpcode = makeOpcode("MOV", "L, C"); break;
-		case 0x6A: strOpcode = makeOpcode("MOV", "L, D"); break;
-		case 0x6B: strOpcode = makeOpcode("MOV", "L, E"); break;
-		case 0x6C: strOpcode = makeOpcode("MOV", "L, H"); break;
-		case 0x6D: strOpcode = makeOpcode("MOV", "L, L"); break;
-		case 0x6E: strOpcode = makeOpcode("MOV", "L, M"); break;
-		case 0x6F: strOpcode = makeOpcode("MOV", "L, A"); break;
+		case 0x68: opcode = makeOpcode("MOV", "L, B"); break;
+		case 0x69: opcode = makeOpcode("MOV", "L, C"); break;
+		case 0x6A: opcode = makeOpcode("MOV", "L, D"); break;
+		case 0x6B: opcode = makeOpcode("MOV", "L, E"); break;
+		case 0x6C: opcode = makeOpcode("MOV", "L, H"); break;
+		case 0x6D: opcode = makeOpcode("MOV", "L, L"); break;
+		case 0x6E: opcode = makeOpcode("MOV", "L, M"); break;
+		case 0x6F: opcode = makeOpcode("MOV", "L, A"); break;
 
-		case 0x70: strOpcode = makeOpcode("MOV", "M, B"); break;
-		case 0x71: strOpcode = makeOpcode("MOV", "M, C"); break;
-		case 0x72: strOpcode = makeOpcode("MOV", "M, D"); break;
-		case 0x73: strOpcode = makeOpcode("MOV", "M, E"); break;
-		case 0x74: strOpcode = makeOpcode("MOV", "M, H"); break;
-		case 0x75: strOpcode = makeOpcode("MOV", "M, L"); break;
-		case 0x76: strOpcode = "HLT"; break;
-		case 0x77: strOpcode = makeOpcode("MOV", "M, A"); break;
+		case 0x70: opcode = makeOpcode("MOV", "M, B"); break;
+		case 0x71: opcode = makeOpcode("MOV", "M, C"); break;
+		case 0x72: opcode = makeOpcode("MOV", "M, D"); break;
+		case 0x73: opcode = makeOpcode("MOV", "M, E"); break;
+		case 0x74: opcode = makeOpcode("MOV", "M, H"); break;
+		case 0x75: opcode = makeOpcode("MOV", "M, L"); break;
+		case 0x76: opcode = {"HLT", 1}; break;
+		case 0x77: opcode = makeOpcode("MOV", "M, A"); break;
 		
-		case 0x78: strOpcode = makeOpcode("MOV", "A, B"); break;
-		case 0x79: strOpcode = makeOpcode("MOV", "A, C"); break;
-		case 0x7A: strOpcode = makeOpcode("MOV", "A, D"); break;
-		case 0x7B: strOpcode = makeOpcode("MOV", "A, E"); break;
-		case 0x7C: strOpcode = makeOpcode("MOV", "A, H"); break;
-		case 0x7D: strOpcode = makeOpcode("MOV", "A, L"); break;
-		case 0x7E: strOpcode = makeOpcode("MOV", "A, M"); break;
-		case 0x7F: strOpcode = makeOpcode("MOV", "A, A"); break;
+		case 0x78: opcode = makeOpcode("MOV", "A, B"); break;
+		case 0x79: opcode = makeOpcode("MOV", "A, C"); break;
+		case 0x7A: opcode = makeOpcode("MOV", "A, D"); break;
+		case 0x7B: opcode = makeOpcode("MOV", "A, E"); break;
+		case 0x7C: opcode = makeOpcode("MOV", "A, H"); break;
+		case 0x7D: opcode = makeOpcode("MOV", "A, L"); break;
+		case 0x7E: opcode = makeOpcode("MOV", "A, M"); break;
+		case 0x7F: opcode = makeOpcode("MOV", "A, A"); break;
 
-		case 0x80: strOpcode = makeOpcode("ADD", "B"); break;
-		case 0x81: strOpcode = makeOpcode("ADD", "C"); break;
-		case 0x82: strOpcode = makeOpcode("ADD", "D"); break;
-		case 0x83: strOpcode = makeOpcode("ADD", "E"); break;
-		case 0x84: strOpcode = makeOpcode("ADD", "H"); break;
-		case 0x85: strOpcode = makeOpcode("ADD", "L"); break;
-		case 0x86: strOpcode = makeOpcode("ADD", "M"); break;
-		case 0x87: strOpcode = makeOpcode("ADD", "A"); break;
+		case 0x80: opcode = makeOpcode("ADD", "B"); break;
+		case 0x81: opcode = makeOpcode("ADD", "C"); break;
+		case 0x82: opcode = makeOpcode("ADD", "D"); break;
+		case 0x83: opcode = makeOpcode("ADD", "E"); break;
+		case 0x84: opcode = makeOpcode("ADD", "H"); break;
+		case 0x85: opcode = makeOpcode("ADD", "L"); break;
+		case 0x86: opcode = makeOpcode("ADD", "M"); break;
+		case 0x87: opcode = makeOpcode("ADD", "A"); break;
 		
-		case 0x88: strOpcode = makeOpcode("ADC", "B"); break;
-		case 0x89: strOpcode = makeOpcode("ADC", "C"); break;
-		case 0x8A: strOpcode = makeOpcode("ADC", "D"); break;
-		case 0x8B: strOpcode = makeOpcode("ADC", "E"); break;
-		case 0x8C: strOpcode = makeOpcode("ADC", "H"); break;
-		case 0x8D: strOpcode = makeOpcode("ADC", "L"); break;
-		case 0x8E: strOpcode = makeOpcode("ADC", "M"); break;
-		case 0x8F: strOpcode = makeOpcode("ADC", "A"); break;
+		case 0x88: opcode = makeOpcode("ADC", "B"); break;
+		case 0x89: opcode = makeOpcode("ADC", "C"); break;
+		case 0x8A: opcode = makeOpcode("ADC", "D"); break;
+		case 0x8B: opcode = makeOpcode("ADC", "E"); break;
+		case 0x8C: opcode = makeOpcode("ADC", "H"); break;
+		case 0x8D: opcode = makeOpcode("ADC", "L"); break;
+		case 0x8E: opcode = makeOpcode("ADC", "M"); break;
+		case 0x8F: opcode = makeOpcode("ADC", "A"); break;
 
-		case 0x90: strOpcode = makeOpcode("SUB", "B"); break;
-		case 0x91: strOpcode = makeOpcode("SUB", "C"); break;
-		case 0x92: strOpcode = makeOpcode("SUB", "D"); break;
-		case 0x93: strOpcode = makeOpcode("SUB", "E"); break;
-		case 0x94: strOpcode = makeOpcode("SUB", "H"); break;
-		case 0x95: strOpcode = makeOpcode("SUB", "L"); break;
-		case 0x96: strOpcode = makeOpcode("SUB", "M"); break;
-		case 0x97: strOpcode = makeOpcode("SUB", "A"); break;
+		case 0x90: opcode = makeOpcode("SUB", "B"); break;
+		case 0x91: opcode = makeOpcode("SUB", "C"); break;
+		case 0x92: opcode = makeOpcode("SUB", "D"); break;
+		case 0x93: opcode = makeOpcode("SUB", "E"); break;
+		case 0x94: opcode = makeOpcode("SUB", "H"); break;
+		case 0x95: opcode = makeOpcode("SUB", "L"); break;
+		case 0x96: opcode = makeOpcode("SUB", "M"); break;
+		case 0x97: opcode = makeOpcode("SUB", "A"); break;
 		
-		case 0x98: strOpcode = makeOpcode("SBB", "B"); break;
-		case 0x99: strOpcode = makeOpcode("SBB", "C"); break;
-		case 0x9A: strOpcode = makeOpcode("SBB", "D"); break;
-		case 0x9B: strOpcode = makeOpcode("SBB", "E"); break;
-		case 0x9C: strOpcode = makeOpcode("SBB", "H"); break;
-		case 0x9D: strOpcode = makeOpcode("SBB", "L"); break;
-		case 0x9E: strOpcode = makeOpcode("SBB", "M"); break;
-		case 0x9F: strOpcode = makeOpcode("SBB", "A"); break;
+		case 0x98: opcode = makeOpcode("SBB", "B"); break;
+		case 0x99: opcode = makeOpcode("SBB", "C"); break;
+		case 0x9A: opcode = makeOpcode("SBB", "D"); break;
+		case 0x9B: opcode = makeOpcode("SBB", "E"); break;
+		case 0x9C: opcode = makeOpcode("SBB", "H"); break;
+		case 0x9D: opcode = makeOpcode("SBB", "L"); break;
+		case 0x9E: opcode = makeOpcode("SBB", "M"); break;
+		case 0x9F: opcode = makeOpcode("SBB", "A"); break;
 
-		case 0xA0: strOpcode = makeOpcode("ANA", "B"); break;
-		case 0xA1: strOpcode = makeOpcode("ANA", "C"); break;
-		case 0xA2: strOpcode = makeOpcode("ANA", "D"); break;
-		case 0xA3: strOpcode = makeOpcode("ANA", "E"); break;
-		case 0xA4: strOpcode = makeOpcode("ANA", "H"); break;
-		case 0xA5: strOpcode = makeOpcode("ANA", "L"); break;
-		case 0xA6: strOpcode = makeOpcode("ANA", "M"); break;
-		case 0xA7: strOpcode = makeOpcode("ANA", "A"); break;
+		case 0xA0: opcode = makeOpcode("ANA", "B"); break;
+		case 0xA1: opcode = makeOpcode("ANA", "C"); break;
+		case 0xA2: opcode = makeOpcode("ANA", "D"); break;
+		case 0xA3: opcode = makeOpcode("ANA", "E"); break;
+		case 0xA4: opcode = makeOpcode("ANA", "H"); break;
+		case 0xA5: opcode = makeOpcode("ANA", "L"); break;
+		case 0xA6: opcode = makeOpcode("ANA", "M"); break;
+		case 0xA7: opcode = makeOpcode("ANA", "A"); break;
 		
-		case 0xA8: strOpcode = makeOpcode("XRA", "B"); break;
-		case 0xA9: strOpcode = makeOpcode("XRA", "C"); break;
-		case 0xAA: strOpcode = makeOpcode("XRA", "D"); break;
-		case 0xAB: strOpcode = makeOpcode("XRA", "E"); break;
-		case 0xAC: strOpcode = makeOpcode("XRA", "H"); break;
-		case 0xAD: strOpcode = makeOpcode("XRA", "L"); break;
-		case 0xAE: strOpcode = makeOpcode("XRA", "M"); break;
-		case 0xAF: strOpcode = makeOpcode("XRA", "A"); break;
+		case 0xA8: opcode = makeOpcode("XRA", "B"); break;
+		case 0xA9: opcode = makeOpcode("XRA", "C"); break;
+		case 0xAA: opcode = makeOpcode("XRA", "D"); break;
+		case 0xAB: opcode = makeOpcode("XRA", "E"); break;
+		case 0xAC: opcode = makeOpcode("XRA", "H"); break;
+		case 0xAD: opcode = makeOpcode("XRA", "L"); break;
+		case 0xAE: opcode = makeOpcode("XRA", "M"); break;
+		case 0xAF: opcode = makeOpcode("XRA", "A"); break;
 
-		case 0xB0: strOpcode = makeOpcode("ORA", "B"); break;
-		case 0xB1: strOpcode = makeOpcode("ORA", "C"); break;
-		case 0xB2: strOpcode = makeOpcode("ORA", "D"); break;
-		case 0xB3: strOpcode = makeOpcode("ORA", "E"); break;
-		case 0xB4: strOpcode = makeOpcode("ORA", "H"); break;
-		case 0xB5: strOpcode = makeOpcode("ORA", "L"); break;
-		case 0xB6: strOpcode = makeOpcode("ORA", "M"); break;
-		case 0xB7: strOpcode = makeOpcode("ORA", "A"); break;
+		case 0xB0: opcode = makeOpcode("ORA", "B"); break;
+		case 0xB1: opcode = makeOpcode("ORA", "C"); break;
+		case 0xB2: opcode = makeOpcode("ORA", "D"); break;
+		case 0xB3: opcode = makeOpcode("ORA", "E"); break;
+		case 0xB4: opcode = makeOpcode("ORA", "H"); break;
+		case 0xB5: opcode = makeOpcode("ORA", "L"); break;
+		case 0xB6: opcode = makeOpcode("ORA", "M"); break;
+		case 0xB7: opcode = makeOpcode("ORA", "A"); break;
 		
-		case 0xB8: strOpcode = makeOpcode("CMP", "B"); break;
-		case 0xB9: strOpcode = makeOpcode("CMP", "C"); break;
-		case 0xBA: strOpcode = makeOpcode("CMP", "D"); break;
-		case 0xBB: strOpcode = makeOpcode("CMP", "E"); break;
-		case 0xBC: strOpcode = makeOpcode("CMP", "H"); break;
-		case 0xBD: strOpcode = makeOpcode("CMP", "L"); break;
-		case 0xBE: strOpcode = makeOpcode("CMP", "M"); break;
-		case 0xBF: strOpcode = makeOpcode("CMP", "A"); break;
+		case 0xB8: opcode = makeOpcode("CMP", "B"); break;
+		case 0xB9: opcode = makeOpcode("CMP", "C"); break;
+		case 0xBA: opcode = makeOpcode("CMP", "D"); break;
+		case 0xBB: opcode = makeOpcode("CMP", "E"); break;
+		case 0xBC: opcode = makeOpcode("CMP", "H"); break;
+		case 0xBD: opcode = makeOpcode("CMP", "L"); break;
+		case 0xBE: opcode = makeOpcode("CMP", "M"); break;
+		case 0xBF: opcode = makeOpcode("CMP", "A"); break;
 
-		case 0xC0: strOpcode = "RNZ"; break;
-		case 0xC1: strOpcode = makeOpcode("POP", "B"); break;
-		case 0xC2: strOpcode = makeOpcode4b("JNZ", "", code[2], code[1]); opbytes=3; break;
-		case 0xC3: strOpcode = makeOpcode4b("JMP", "", code[2], code[1]); opbytes=3; break;
-		case 0xC4: strOpcode = makeOpcode4b("CNZ", "", code[2], code[1]); opbytes=3; break;
-		case 0xC5: strOpcode = makeOpcode("PUSH", "B"); break;
-		case 0xC6: strOpcode = makeOpcode2b("ADI", "#", code[1]); opbytes=2; break;
-		case 0xC7: strOpcode = makeOpcode("RST", "0"); break;
+		case 0xC0: opcode = {"RNZ", 1}; break;
+		case 0xC1: opcode = makeOpcode("POP", "B"); break;
+		case 0xC2: opcode = makeOpcode4b("JNZ", "", code[pc + 2], code[pc + 1]); break;
+		case 0xC3: opcode = makeOpcode4b("JMP", "", code[pc + 2], code[pc + 1]); break;
+		case 0xC4: opcode = makeOpcode4b("CNZ", "", code[pc + 2], code[pc + 1]); break;
+		case 0xC5: opcode = makeOpcode("PUSH", "B"); break;
+		case 0xC6: opcode = makeOpcode2b("ADI", "#", code[pc + 1]); break;
+		case 0xC7: opcode = makeOpcode("RST", "0"); break;
 
-		case 0xC8: strOpcode = "RZ"; break;
-		case 0xC9: strOpcode = "RET"; break;
-		case 0xCA: strOpcode = makeOpcode4b("JZ", "", code[2], code[1]); opbytes=3; break;
-		case 0xCB: strOpcode = opcodeNotFound(); break;
-		case 0xCC: strOpcode = makeOpcode4b("CZ", "", code[2], code[1]); opbytes=3; break;
-		case 0xCD: strOpcode = makeOpcode4b("CALL", "", code[2], code[1]); opbytes=3; break;
-		case 0xCE: strOpcode = makeOpcode2b("ACI", "#", code[1]); opbytes=2; break;
-		case 0xCF: strOpcode = makeOpcode("RST", "1"); break;
+		case 0xC8: opcode = {"RZ", 1}; break;
+		case 0xC9: opcode = {"RET", 1}; break;
+		case 0xCA: opcode = makeOpcode4b("JZ", "", code[pc + 2], code[pc + 1]); break;
+		case 0xCB: opcode = opcodeNotFound(); break;
+		case 0xCC: opcode = makeOpcode4b("CZ", "", code[pc + 2], code[pc + 1]); break;
+		case 0xCD: opcode = makeOpcode4b("CALL", "", code[pc + 2], code[pc + 1]); break;
+		case 0xCE: opcode = makeOpcode2b("ACI", "#", code[pc + 1]); break;
+		case 0xCF: opcode = makeOpcode("RST", "1"); break;
 
-		case 0xD0: strOpcode = "RNC"; break;
-		case 0xD1: strOpcode = makeOpcode("POP", "D"); break;
-		case 0xD2: strOpcode = makeOpcode4b("JNC", "", code[2], code[1]); opbytes=3; break;
-		case 0xD3: strOpcode = makeOpcode2b("OUT", "#", code[1]); opbytes=2; break;
-		case 0xD4: strOpcode = makeOpcode4b("CNC", "", code[2], code[1]); opbytes=3; break;
-		case 0xD5: strOpcode = makeOpcode("PUSH", "D"); break;
-		case 0xD6: strOpcode = makeOpcode2b("SUI", "#", code[1]); opbytes=2; break;
-		case 0xD7: strOpcode = makeOpcode("RST", "2"); break;
+		case 0xD0: opcode = {"RNC", 1}; break;
+		case 0xD1: opcode = makeOpcode("POP", "D"); break;
+		case 0xD2: opcode = makeOpcode4b("JNC", "", code[pc + 2], code[pc + 1]); break;
+		case 0xD3: opcode = makeOpcode2b("OUT", "#", code[pc + 1]); break;
+		case 0xD4: opcode = makeOpcode4b("CNC", "", code[pc + 2], code[pc + 1]); break;
+		case 0xD5: opcode = makeOpcode("PUSH", "D"); break;
+		case 0xD6: opcode = makeOpcode2b("SUI", "#", code[pc + 1]); break;
+		case 0xD7: opcode = makeOpcode("RST", "2"); break;
 		
-		case 0xD8: strOpcode = "RC"; break;
-		case 0xD9: strOpcode = opcodeNotFound(); break;
-		case 0xDA: strOpcode = makeOpcode4b("JC", "", code[2], code[1]); opbytes=3; break;
-		case 0xDB: strOpcode = makeOpcode2b("IN", "#", code[1]); opbytes=2; break;
-		case 0xDC: strOpcode = makeOpcode4b("CC", "", code[2], code[1]); opbytes=3; break;
-		case 0xDD: strOpcode = opcodeNotFound(); break;
-		case 0xDE: strOpcode = makeOpcode2b("SBI", "#", code[1]); opbytes=2; break;
-		case 0xDF: strOpcode = makeOpcode("RST", "3"); break;
+		case 0xD8: opcode = {"RC", 1}; break;
+		case 0xD9: opcode = opcodeNotFound(); break;
+		case 0xDA: opcode = makeOpcode4b("JC", "", code[pc + 2], code[pc + 1]); break;
+		case 0xDB: opcode = makeOpcode2b("IN", "#", code[pc + 1]); break;
+		case 0xDC: opcode = makeOpcode4b("CC", "", code[pc + 2], code[pc + 1]); break;
+		case 0xDD: opcode = opcodeNotFound(); break;
+		case 0xDE: opcode = makeOpcode2b("SBI", "#", code[pc + 1]); break;
+		case 0xDF: opcode = makeOpcode("RST", "3"); break;
 
-		case 0xE0: strOpcode = "RPO"; break;
-		case 0xE1: strOpcode = makeOpcode("POP", "H"); break;
-		case 0xE2: strOpcode = makeOpcode4b("JPO", "", code[2], code[1]); opbytes=3; break;
-		case 0xE3: strOpcode = "XTHL"; break;
-		case 0xE4: strOpcode = makeOpcode4b("CPO", "", code[2], code[1]); opbytes=3; break;
-		case 0xE5: strOpcode = makeOpcode("PUSH", "H"); break;
-		case 0xE6: strOpcode = makeOpcode2b("ANI", "#", code[1]); opbytes=2; break;
-		case 0xE7: strOpcode = makeOpcode("RST", "4"); break;
+		case 0xE0: opcode = {"RPO", 1}; break;
+		case 0xE1: opcode = makeOpcode("POP", "H"); break;
+		case 0xE2: opcode = makeOpcode4b("JPO", "", code[pc + 2], code[pc + 1]); break;
+		case 0xE3: opcode = {"XTHL", 1}; break;
+		case 0xE4: opcode = makeOpcode4b("CPO", "", code[pc + 2], code[pc + 1]); break;
+		case 0xE5: opcode = makeOpcode("PUSH", "H"); break;
+		case 0xE6: opcode = makeOpcode2b("ANI", "#", code[pc + 1]); break;
+		case 0xE7: opcode = makeOpcode("RST", "4"); break;
 		
-		case 0xE8: strOpcode = "RPE"; break;
-		case 0xE9: strOpcode = "PCHL"; break;
-		case 0xEA: strOpcode = makeOpcode4b("JPE", "", code[2], code[1]); opbytes=3; break;
-		case 0xEB: strOpcode = "XCHG"; break;
-		case 0xEC: strOpcode = makeOpcode4b("CPE", "", code[2], code[1]); opbytes=3; break;
-		case 0xED: strOpcode = opcodeNotFound(); break;
-		case 0xEE: strOpcode = makeOpcode2b("XRI", "#", code[1]); opbytes=2; break;
-		case 0xEF: strOpcode = makeOpcode("RST", "5"); break;
+		case 0xE8: opcode = {"RPE", 1}; break;
+		case 0xE9: opcode = {"PCHL", 1}; break;
+		case 0xEA: opcode = makeOpcode4b("JPE", "", code[pc + 2], code[pc + 1]); break;
+		case 0xEB: opcode = {"XCHG", 1}; break;
+		case 0xEC: opcode = makeOpcode4b("CPE", "", code[pc + 2], code[pc + 1]); break;
+		case 0xED: opcode = opcodeNotFound(); break;
+		case 0xEE: opcode = makeOpcode2b("XRI", "#", code[pc + 1]); break;
+		case 0xEF: opcode = makeOpcode("RST", "5"); break;
 
-		case 0xF0: strOpcode = "RP"; break;
-		case 0xF1: strOpcode = makeOpcode("POP", "PSW"); break;
-		case 0xF2: strOpcode = makeOpcode4b("JP", "", code[2], code[1]); opbytes=3; break;
-		case 0xF3: strOpcode = "DI"; break;
-		case 0xF4: strOpcode = makeOpcode4b("CP", "", code[2], code[1]); opbytes=3; break;
-		case 0xF5: strOpcode = makeOpcode("PUSH", "PSW"); break;
-		case 0xF6: strOpcode = makeOpcode2b("ORI", "#", code[1]); opbytes=2; break;
-		case 0xF7: strOpcode = makeOpcode("RST", "6"); break;
+		case 0xF0: opcode = {"RP", 1}; break;
+		case 0xF1: opcode = makeOpcode("POP", "PSW"); break;
+		case 0xF2: opcode = makeOpcode4b("JP", "", code[pc + 2], code[pc + 1]); break;
+		case 0xF3: opcode = {"DI", 1}; break;
+		case 0xF4: opcode = makeOpcode4b("CP", "", code[pc + 2], code[pc + 1]); break;
+		case 0xF5: opcode = makeOpcode("PUSH", "PSW"); break;
+		case 0xF6: opcode = makeOpcode2b("ORI", "#", code[pc + 1]); break;
+		case 0xF7: opcode = makeOpcode("RST", "6"); break;
 		
-		case 0xF8: strOpcode = "RM"; break;
-		case 0xF9: strOpcode = "SPHL"; break;
-		case 0xFA: strOpcode = makeOpcode4b("JM", "", code[2], code[1]); opbytes=3; break;
-		case 0xFB: strOpcode = "EI"; break;
-		case 0xFC: strOpcode = makeOpcode4b("CM", "", code[2], code[1]); opbytes=3; break;
-		case 0xFD: strOpcode = opcodeNotFound(); break;
-		case 0xFE: strOpcode = makeOpcode2b("CPI", "#", code[1]); opbytes=2; break;
-		case 0xFF: strOpcode = makeOpcode("RST", "7"); break;
+		case 0xF8: opcode = {"RM", 1}; break;
+		case 0xF9: opcode = {"SPHL", 1}; break;
+		case 0xFA: opcode = makeOpcode4b("JM", "", code[pc + 2], code[pc + 1]); break;
+		case 0xFB: opcode = {"EI", 1}; break;
+		case 0xFC: opcode = makeOpcode4b("CM", "", code[pc + 2], code[pc + 1]); break;
+		case 0xFD: opcode = opcodeNotFound(); break;
+		case 0xFE: opcode = makeOpcode2b("CPI", "#", code[pc + 1]); break;
+		case 0xFF: opcode = makeOpcode("RST", "7"); break;
 
-		default  : strOpcode = opcodeNotFound();
+		default  : opcode = opcodeNotFound();
 	}
 
-	LOG_TRACE_FMT("%s\n", strOpcode);
+	// quick and dirty debug print may fix it may not
+	#if defined DEBUG || defined _DEBUG
+		std::cout << std::hex << std::setw(5) << std::setfill('0') << pc << std::dec << " | ";
+		for (int i=0; i < opcode.size; i++) {
+			std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)code[pc + i] << " ";
+		}
+		for (int i=opcode.size; i < 3; i++) {
+			std::cout << std::setw(3) << std::setfill(' ') << "";
+		}
+		std::cout << "| " << opcode.symbol << std::endl;
+	#endif
 	
-	return {strOpcode, opbytes};
+	return opcode;
 }

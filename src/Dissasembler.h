@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 struct OpcodeData {
 	std::string symbol;
@@ -8,5 +9,5 @@ struct OpcodeData {
 };
 
 namespace dissasemble {
-	OpcodeData dissasemble(uint8_t* codeBuffer, int pc);
+	OpcodeData dissasemble(std::vector<uint8_t>& codeBuffer, int pc);
 }
