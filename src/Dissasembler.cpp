@@ -365,14 +365,16 @@ OpcodeData dissasemble::dissasemble(std::vector<uint8_t>& code, int pc)
 
 	// quick and dirty debug print may fix it may not
 	#if defined DEBUG || defined _DEBUG
-		std::cout << std::hex << std::setw(5) << std::setfill('0') << pc << std::dec << " | ";
-		for (int i=0; i < opcode.size; i++) {
-			std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)code[pc + i] << " ";
-		}
-		for (int i=opcode.size; i < 3; i++) {
-			std::cout << std::setw(3) << std::setfill(' ') << "";
-		}
-		std::cout << "| " << opcode.symbol << std::endl;
+		std::cout << std::hex << std::setw(4) << std::setfill('0') << pc;
+		// std::cout << std::dec << " | ";
+		// for (int i=0; i < opcode.size; i++) {
+		// 	std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)code[pc + i] << " ";
+		// }
+		// for (int i=opcode.size; i < 3; i++) {
+		// 	std::cout << std::setw(3) << std::setfill(' ') << "";
+		// }
+		// std::cout << "|";
+		std::cout << " " << opcode.symbol << std::endl;
 	#endif
 	
 	return opcode;
