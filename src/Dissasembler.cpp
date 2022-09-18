@@ -17,7 +17,7 @@ namespace {
 		// get string size
 		int opcode_size = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1;
 		if (opcode_size <= 0) { 
-			throw std::runtime_error( "Error during formatting."); 
+			throw std::runtime_error("Error during formatting."); 
 		}
 		size_t size = static_cast<size_t>(opcode_size);
 		// create buffer
@@ -56,11 +56,8 @@ namespace {
 	#ifdef THROW_ON_UNSUPPORTED_OPCODE
 		throw std::runtime_error("unsupported opcode");
 	#endif//THROW_ON_UNSUPPORTED_OPCODE
-	#ifdef NOP_ON_UNSUPPORTED_OPCODE
-		return {"NOP", 1};
-	#else
-		return {"-", 1};
-	#endif//NOP_ON_UNSUPPORTED_OPCODE
+	
+	return {"NOP", 1};
 	}
 }
 
