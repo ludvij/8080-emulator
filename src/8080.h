@@ -63,10 +63,10 @@ private:
 	void mov(uint8_t& r1, uint8_t r2);
 
 	// logic
-	void ana(reg_t r1, reg_t r2);
-	void ora(reg_t r1, reg_t r2);
-	void xra(reg_t r1, reg_t r2);
-	void cmp(reg_t r1, reg_t r2);
+	void ana(uint8_t other);
+	void ora(uint8_t other);
+	void xra(uint8_t other);
+	void cmp(uint8_t other);
 	void dad(uint16_t rp);
 	void logicFlags(reg_t reg, uint8_t flags);
 
