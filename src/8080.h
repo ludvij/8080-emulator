@@ -48,28 +48,40 @@ public:
 private:
 	void unimplementedInstruction();
 
-	// operations that are done a lot
+	// arithmetic
 	void inx(reg_t& r1, reg_t& r2);
 	void inr(uint8_t& r);
 	void dcr(reg_t& r);
 	void dcx(reg_t& r1, reg_t& r2);
-	void dad(reg_t r1, reg_t r2);
-
-	void mov(uint8_t& r1, uint8_t r2);
 	void add(uint8_t other);
 	void adc(uint8_t other);
 	void sub(uint8_t other);
 	void sbb(uint8_t other);
+	void arithFlags(uint16_t res, uint8_t flags);
+
+	// data
+	void mov(uint8_t& r1, uint8_t r2);
+
+	// logic
 	void ana(reg_t r1, reg_t r2);
 	void ora(reg_t r1, reg_t r2);
 	void xra(reg_t r1, reg_t r2);
 	void cmp(reg_t r1, reg_t r2);
-
-	void arithFlags(uint16_t res, uint8_t flags);
+	void dad(uint16_t rp);
 	void logicFlags(reg_t reg, uint8_t flags);
+
+	// branch
+	void jmp();
+	void jmp(uint8_t hi, uint8_t lo);
+	void call();
+	void ret();
+	void rst(uint16_t address);
+
+	// flag helpers
 	int parity(int x, int size=8);
 	void auxCarry(uint16_t a, uint16_t b);
 
+	// get memory pos of HL
 	uint8_t& getHL();
 };
 

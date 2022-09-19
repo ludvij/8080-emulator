@@ -13,10 +13,10 @@ void State8080::unimplementedInstruction() {
 void State8080::inx(reg_t& r1, reg_t& r2)
 {
 	// could add registers, increment, and then sepparate again, or could not, or could not and just do this
-	if (r1 == 0xff && r2 == 0xff) {
+	if(r1 == 0xff && r2 == 0xff) {
 		r1 = 0;
 		r2 = 0;
-	} else if (r2 == 0xff) {
+	} else if(r2 == 0xff) {
 		r1++;
 		r2 = 0;
 	} else {
@@ -41,10 +41,10 @@ void State8080::inr(reg_t& r)
 void State8080::dcx(reg_t& r1, reg_t& r2)
 {
 	// could add registers, decrement, and then sepparate again, or could not, or could not and just do this
-	if (r1 == 0x00 && r2 == 0x00) {
+	if(r1 == 0x00 && r2 == 0x00) {
 		r1 = 0xff;
 		r2 = 0xff;
-	} else if ((r2 == 0xff) && (r1 > 0)) {
+	} else if((r2 == 0xff) && (r1 > 0)) {
 		r1--;
 		r2 = 0xff;
 	} else {
@@ -52,12 +52,13 @@ void State8080::dcx(reg_t& r1, reg_t& r2)
 	}
 }
 
-void State8080::dad(reg_t r1, reg_t r2)
+void State8080::dad(uint16_t rp)
 {
-	uint16_t rp = (r1 << 8) | r2;
 	uint16_t hl = (r.h << 8) | r.l;
 	hl += rp;
 	arithFlags(hl, FLAG_CY);
+	if (hl == 0) cc.cy = 1;
+	cc.cy = (hl == 0) == 0;
 
 	r.h = static_cast<reg_t>(hl >> 8);
 	r.l = static_cast<reg_t>(hl & 0xff);
@@ -104,10 +105,36 @@ void State8080::sbb(uint8_t other)
 
 	r.a = static_cast<reg_t>(res & 0xff);
 }
-void State8080::ana(reg_t r1, reg_t r2) { r1 = r1 & r2;         }
-void State8080::ora(reg_t r1, reg_t r2) { r1 = r1 | r2;         }
-void State8080::xra(reg_t r1, reg_t r2) { r1 = r1 ^ r2;         }
-void State8080::cmp(reg_t r1, reg_t r2) { r1 = r1 == r2;        }
+void State8080::ana(reg_t r1, reg_t r2) { r1 = r1 & r2; }
+void State8080::ora(reg_t r1, reg_t r2) { r1 = r1 | r2; }
+void State8080::xra(reg_t r1, reg_t r2) { r1 = r1 ^ r2; }
+void State8080::cmp(reg_t r1, reg_t r2) { r1 = r1 == r2;}
+
+void State8080::jmp(uint8_t hi, uint8_t lo)	{ pc = (hi << 8) | lo; 					}
+void State8080::jmp()						{ jmp(memory[pc + 2], memory[pc + 1]);	}
+
+void State8080::rst(uint16_t address) 
+{
+	uint16_t ret = pc + 2;
+	memory[sp - 1] = (ret >> 8) | 0xff;
+	memory[sp - 2] = (ret & 0xff);
+	sp -= 2;
+	pc = address; 
+}
+void State8080::call()
+{
+	uint16_t ret = pc + 2;
+	memory[sp - 1] = (ret >> 8) | 0xff;
+	memory[sp - 2] = (ret & 0xff);
+	sp -= 2;
+	pc = (memory[pc + 2] << 8) | memory[pc + 1];
+}
+
+void State8080::ret()
+{
+	pc = memory[sp] | (memory[sp+1] << 8);
+	sp += 2;
+}
 
 // AC flag, carry is set from bit 3 to bit 4, 
 // so when an operation with bits under 0x10 trigger the 0x10 bit
@@ -125,7 +152,7 @@ int State8080::parity(int x, int size)
 	x = (x & ((1 << size) - 1));
 
 	for(int i = 0; i < size; i++) {
-		if (x & 0x1) p++;
+		if(x & 0x1) p++;
 		x = x >> 1;
 	}
 	return (0 == (p & 0x1));
@@ -133,22 +160,22 @@ int State8080::parity(int x, int size)
 
 void State8080::arithFlags(uint16_t res, uint8_t flags)
 {
-	if (flags & FLAG_Z)  cc.z = ((res & 0xff) == 0);
-	if (flags & FLAG_S)  cc.s = ((res & 0x80) != 0);
-	if (flags & FLAG_P)  cc.p = parity(res & 0xff);
-	if (flags & FLAG_CY) cc.cy = (res > 0xff);
+	if(flags & FLAG_Z)  cc.z = ((res & 0xff) == 0);
+	if(flags & FLAG_S)  cc.s = ((res & 0x80) != 0);
+	if(flags & FLAG_P)  cc.p = parity(res & 0xff);
+	if(flags & FLAG_CY) cc.cy = (res > 0xff);
 }
 void State8080::logicFlags(reg_t reg, uint8_t flags)
 {
-	if (flags & FLAG_Z)  cc.z = (reg == 0);
-	if (flags & FLAG_S)  cc.s = ((reg & 0x80) != 0);
-	if (flags & FLAG_P)  cc.p = parity(reg & 0xff);
-	if (flags & FLAG_CY) cc.cy = cc.ac = 0;
+	if(flags & FLAG_Z)  cc.z = (reg == 0);
+	if(flags & FLAG_S)  cc.s = ((reg & 0x80) != 0);
+	if(flags & FLAG_P)  cc.p = parity(reg & 0xff);
+	if(flags & FLAG_CY) cc.cy = cc.ac = 0;
 }
 
 uint8_t& State8080::getHL()
 {
-	uint16_t offset = (r.h << 8) | (r.l);
+	uint16_t offset = (r.h << 8) | r.l;
 	return memory[offset];
 }
 
@@ -169,7 +196,7 @@ int State8080::Emulate8080p() {
 		case 0x07: unimplementedInstruction(); break;
 		
 		case 0x08: break; // -
-		case 0x09: dad(r.b, r.c); break;	// DAD B
+		case 0x09: dad((r.b << 8) | r.c); break;	// DAD B
 		case 0x0A: unimplementedInstruction(); break;
 		case 0x0B: dcx(r.b, r.c); break;	// DCX B
 		case 0x0C: inr(r.c); break;			// INR C
@@ -177,7 +204,7 @@ int State8080::Emulate8080p() {
 		case 0x0E: unimplementedInstruction(); break;
 		case 0x0F: unimplementedInstruction(); break;
 
-		case 0x10: break; // -
+		case 0x10: break; 					// -
 		case 0x11: unimplementedInstruction(); break;
 		case 0x12: unimplementedInstruction(); break;
 		case 0x13: inx(r.d, r.e); break;	// INX D
@@ -186,8 +213,8 @@ int State8080::Emulate8080p() {
 		case 0x16: unimplementedInstruction(); break;
 		case 0x17: unimplementedInstruction(); break;
 
-		case 0x18: break; // -
-		case 0x19: dad(r.d, r.e); break;	// DAD D
+		case 0x18: break; 					// -
+		case 0x19: dad((r.d << 8) | r.e); break;	// DAD D
 		case 0x1A: unimplementedInstruction(); break;
 		case 0x1B: dcx(r.d, r.e); break;	// DCX D
 		case 0x1C: inr(r.e); break;			// INR E
@@ -195,7 +222,7 @@ int State8080::Emulate8080p() {
 		case 0x1E: unimplementedInstruction(); break;
 		case 0x1F: unimplementedInstruction(); break;
 
-		case 0x20: break; // -
+		case 0x20: break; 					// -
 		case 0x21: unimplementedInstruction(); break;
 		case 0x22: unimplementedInstruction(); break;
 		case 0x23: inx(r.h, r.l); break;	// INX H
@@ -204,8 +231,8 @@ int State8080::Emulate8080p() {
 		case 0x26: unimplementedInstruction(); break;
 		case 0x27: unimplementedInstruction(); break;
 
-		case 0x28: break; // -
-		case 0x29: dad(r.h, r.l); break;	// DAD H
+		case 0x28: break; 					// -
+		case 0x29: dad((r.h << 8) | r.l); break;	// DAD H
 		case 0x2A: unimplementedInstruction(); break;
 		case 0x2B: dcx(r.h, r.l); break;	// DCX H
 		case 0x2C: inr(r.l); break;			// INR L
@@ -213,7 +240,7 @@ int State8080::Emulate8080p() {
 		case 0x2E: unimplementedInstruction(); break;
 		case 0x2F: unimplementedInstruction(); break;
 
-		case 0x30: break; // -
+		case 0x30: break; 					// -
 		case 0x31: unimplementedInstruction(); break;
 		case 0x32: unimplementedInstruction(); break;
 		case 0x33: sp++; break;				// INX SP
@@ -222,8 +249,8 @@ int State8080::Emulate8080p() {
 		case 0x36: unimplementedInstruction(); break;
 		case 0x37: unimplementedInstruction(); break;
 
-		case 0x38: break; // -
-		case 0x39: dad(sp, sp); break;		// DAD SP, quick and dirty, should work
+		case 0x38: break; 					// -
+		case 0x39: dad(sp); break;			// DAD SP, quick and dirty, should work
 		case 0x3A: unimplementedInstruction(); break;
 		case 0x3B: sp--; break;				// DCX SP
 		case 0x3C: inr(r.a); break;			// INR A
@@ -347,6 +374,7 @@ int State8080::Emulate8080p() {
 		case 0xA5: unimplementedInstruction(); break;
 		case 0xA6: unimplementedInstruction(); break;
 		case 0xA7: unimplementedInstruction(); break;
+
 		case 0xA8: unimplementedInstruction(); break;
 		case 0xA9: unimplementedInstruction(); break;
 		case 0xAA: unimplementedInstruction(); break;
@@ -355,6 +383,7 @@ int State8080::Emulate8080p() {
 		case 0xAD: unimplementedInstruction(); break;
 		case 0xAE: unimplementedInstruction(); break;
 		case 0xAF: unimplementedInstruction(); break;
+
 		case 0xB0: unimplementedInstruction(); break;
 		case 0xB1: unimplementedInstruction(); break;
 		case 0xB2: unimplementedInstruction(); break;
@@ -363,6 +392,7 @@ int State8080::Emulate8080p() {
 		case 0xB5: unimplementedInstruction(); break;
 		case 0xB6: unimplementedInstruction(); break;
 		case 0xB7: unimplementedInstruction(); break;
+
 		case 0xB8: unimplementedInstruction(); break;
 		case 0xB9: unimplementedInstruction(); break;
 		case 0xBA: unimplementedInstruction(); break;
@@ -371,70 +401,78 @@ int State8080::Emulate8080p() {
 		case 0xBD: unimplementedInstruction(); break;
 		case 0xBE: unimplementedInstruction(); break;
 		case 0xBF: unimplementedInstruction(); break;
-		case 0xC0: unimplementedInstruction(); break;
+
+		case 0xC0: if(cc.z == 0) ret(); else pc += 2; break;	// RNZ 
 		case 0xC1: unimplementedInstruction(); break;
-		case 0xC2: unimplementedInstruction(); break;
-		case 0xC3: unimplementedInstruction(); break;
-		case 0xC4: unimplementedInstruction(); break;
+		case 0xC2: if(cc.z == 0) jmp(); else pc += 2; break;	// JNZ address
+		case 0xC3: jmp(); break;								// JMP address
+		case 0xC4: if(cc.z == 0) call(); else pc+=2; break;		// CNZ address
 		case 0xC5: unimplementedInstruction(); break;
-		case 0xC6: add(memory[pc + 1]);	break;	// ADI byte
-		case 0xC7: unimplementedInstruction(); break;
-		case 0xC8: unimplementedInstruction(); break;
-		case 0xC9: unimplementedInstruction(); break;
-		case 0xCA: unimplementedInstruction(); break;
+		case 0xC6: add(memory[pc + 1]);	break;					// ADI byte
+		case 0xC7: rst(0x0); break;								// RST 0
+
+		case 0xC8: if(cc.z != 0) ret(); else pc += 2; break;	// RZ
+		case 0xC9: ret(); break;								// RET
+		case 0xCA: if(cc.z != 0) jmp(); else pc += 2; break;	// JZ address
 		case 0xCB: unimplementedInstruction(); break;
-		case 0xCC: unimplementedInstruction(); break;
-		case 0xCD: unimplementedInstruction(); break;
-		case 0xCE: adc(memory[pc + 1]); break; // ACY byte
-		case 0xCF: unimplementedInstruction(); break;
-		case 0xD0: unimplementedInstruction(); break;
+		case 0xCC: if(cc.z != 0) call(); else pc += 2; break;	// CZ address
+		case 0xCD: call(); break;								// CALL address
+		case 0xCE: adc(memory[pc + 1]); break; 					// ACY byte
+		case 0xCF: rst(0x8); break;								// RST 1
+
+		case 0xD0: if(cc.cy == 0) ret(); else pc += 2; break;	// RNC
 		case 0xD1: unimplementedInstruction(); break;
-		case 0xD2: unimplementedInstruction(); break;
+		case 0xD2: if(cc.cy == 0) jmp(); else pc += 2; break;	// JNC address
 		case 0xD3: unimplementedInstruction(); break;
-		case 0xD4: unimplementedInstruction(); break;
+		case 0xD4: if(cc.cy == 0) call(); else pc += 2; break;	// CNC address
 		case 0xD5: unimplementedInstruction(); break;
-		case 0xD6: sub(memory[pc + 1]); break;	// SUI byte
-		case 0xD7: unimplementedInstruction(); break;
-		case 0xD8: unimplementedInstruction(); break;
+		case 0xD6: sub(memory[pc + 1]); break;					// SUI byte
+		case 0xD7: rst(0x10); break;							// RST 2
+
+		case 0xD8: if(cc.cy != 0) ret(); else pc += 2; break;	// RC
 		case 0xD9: unimplementedInstruction(); break;
-		case 0xDA: unimplementedInstruction(); break;
+		case 0xDA: if(cc.cy != 0) jmp(); else pc += 2; break;	// JC address
 		case 0xDB: unimplementedInstruction(); break;
-		case 0xDC: unimplementedInstruction(); break;
+		case 0xDC: if(cc.cy != 0) call(); else pc += 2; break;	// CC address
 		case 0xDD: unimplementedInstruction(); break;
-		case 0xDE: sbb(memory[pc + 1]); break; // SBI byte
-		case 0xDF: unimplementedInstruction(); break;
-		case 0xE0: unimplementedInstruction(); break;
+		case 0xDE: sbb(memory[pc + 1]); break; 					// SBI byte
+		case 0xDF: rst(0x18); break;							// RST 3
+		
+		case 0xE0: if(cc.p == 0) ret(); else pc += 2; break;	// RPO
 		case 0xE1: unimplementedInstruction(); break;
-		case 0xE2: unimplementedInstruction(); break;
+		case 0xE2: if(cc.p == 0) jmp(); else pc += 2; break;	// JPO address (parity odd, not set)
 		case 0xE3: unimplementedInstruction(); break;
-		case 0xE4: unimplementedInstruction(); break;
+		case 0xE4: if(cc.p == 0) call(); else pc += 2; break;	// CPO address
 		case 0xE5: unimplementedInstruction(); break;
 		case 0xE6: unimplementedInstruction(); break;
-		case 0xE7: unimplementedInstruction(); break;
-		case 0xE8: unimplementedInstruction(); break;
-		case 0xE9: unimplementedInstruction(); break;
-		case 0xEA: unimplementedInstruction(); break;
+		case 0xE7: rst(0x20); break;							// RST 4
+		
+		case 0xE8: if(cc.p != 0) ret(); else pc += 2; break;	// RPE
+		case 0xE9: jmp(r.h, r.l); break;						// PCHL
+		case 0xEA: if(cc.p != 0) jmp(); else pc += 2; break;	// JPE address (parity even, set)
 		case 0xEB: unimplementedInstruction(); break;
-		case 0xEC: unimplementedInstruction(); break;
+		case 0xEC: if(cc.p != 0) call(); else pc += 2; break;	// CPE address
 		case 0xED: unimplementedInstruction(); break;
 		case 0xEE: unimplementedInstruction(); break;
-		case 0xEF: unimplementedInstruction(); break;
-		case 0xF0: unimplementedInstruction(); break;
+		case 0xEF: rst(0x28); break;							// RST 5
+		
+		case 0xF0: if(cc.s == 0) ret(); else pc += 2; break;	// RP
 		case 0xF1: unimplementedInstruction(); break;
-		case 0xF2: unimplementedInstruction(); break;
+		case 0xF2: if(cc.s == 0) jmp(); else pc += 2; break;	// JP address (plus)
 		case 0xF3: unimplementedInstruction(); break;
-		case 0xF4: unimplementedInstruction(); break;
+		case 0xF4: if(cc.s == 0) call(); else pc += 2; break;	// CP address
 		case 0xF5: unimplementedInstruction(); break;
 		case 0xF6: unimplementedInstruction(); break;
-		case 0xF7: unimplementedInstruction(); break;
-		case 0xF8: unimplementedInstruction(); break;
+		case 0xF7: rst(0x30); break;							// RST 6
+		
+		case 0xF8: if(cc.p != 0) ret(); else pc += 2; break;	// RM
 		case 0xF9: unimplementedInstruction(); break;
-		case 0xFA: unimplementedInstruction(); break;
+		case 0xFA: if(cc.s != 0) jmp(); else pc += 2; break;	// JM address (minus)
 		case 0xFB: unimplementedInstruction(); break;
-		case 0xFC: unimplementedInstruction(); break;
+		case 0xFC: if(cc.s != 0) call(); else pc += 2; break;	// CM address
 		case 0xFD: unimplementedInstruction(); break;
 		case 0xFE: unimplementedInstruction(); break;
-		case 0xFF: unimplementedInstruction(); break;
+		case 0xFF: rst(0x38); break;							// RST 7
 	}
 
 }
