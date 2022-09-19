@@ -52,6 +52,7 @@ void State8080::dcx(reg_t& r1, reg_t& r2)
 	}
 }
 
+// TODO: FIX THIS
 void State8080::dad(uint16_t rp)
 {
 	uint16_t hl = (r.h << 8) | r.l;
