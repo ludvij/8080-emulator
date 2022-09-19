@@ -52,15 +52,14 @@ void State8080::dcx(reg_t& r1, reg_t& r2)
 	}
 }
 
-// TODO: FIX THIS
 void State8080::dad(uint16_t rp)
 {
-	uint16_t hl = (r.h << 8) | r.l;
-	hl += rp;
-	arithFlags(hl, FLAG_CY);
-	if (hl == 0) cc.cy = 1;
-	cc.cy = (hl == 0) == 0;
-
+	// TODO: make this simpler
+	uint32_t hl_32 = (r.h << 8) | r.l;
+	hl_32 = hl_32 + static_cast<uint32_t>(rp);
+	cc.cy = (hl_32 > 0xffff);
+	
+	uint16_t hl = (hl_32 & 0xffff);
 	r.h = static_cast<reg_t>(hl >> 8);
 	r.l = static_cast<reg_t>(hl & 0xff);
 }
