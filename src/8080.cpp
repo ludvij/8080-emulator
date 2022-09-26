@@ -281,7 +281,7 @@ int State8080::Emulate8080p() {
 		case 0x34: inr(getHL()); break; // INR M
 		case 0x35: dcr(getHL()); break; // DCR M
 		case 0x36: unimplementedInstruction(); break;
-		case 0x37: unimplementedInstruction(); break;
+		case 0x37: cc.cy = 1; break; // STC
 
 		case 0x38: break; // -
 		case 0x39: dad(sp); break; // DAD SP, quick and dirty, should work
@@ -290,7 +290,7 @@ int State8080::Emulate8080p() {
 		case 0x3C: inr(r.a); break; // INR A
 		case 0x3D: dcr(r.b); break; // DCR A
 		case 0x3E: unimplementedInstruction(); break;
-		case 0x3F: unimplementedInstruction(); break;
+		case 0x3F: cc.cy = ~cc.cy; break; // CMC
 
 		case 0x40: mov(r.b, r.b); break; // MOV B,B	
 		case 0x41: mov(r.b, r.c); break; // MOV B,C
