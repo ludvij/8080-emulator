@@ -212,10 +212,10 @@ int State8080::Emulate8080p() {
 		case 0x04: inr(r.b); break; // INR B
 		case 0x05: dcr(r.b); break; // DCR B
 		case 0x06: unimplementedInstruction(); break;
-		case 0x07: // RLC // TODO: THIS
+		case 0x07: // RLC
 			uint8_t x = r.a;
-			r.a = ((x & 1) << 7) | (x >> 1);
-			cc.cy = 1 == (x & 1);
+			r.a = ((x & 0x80) >> 7) | (x << 1);
+			cc.cy = 1 == (x & 0x80);
 			break; 
 		
 		case 0x08: break; // -
@@ -228,7 +228,7 @@ int State8080::Emulate8080p() {
 		case 0x0F: // RRC
 			uint8_t x = r.a;
 			r.a = ((x & 1) << 7) | (x >> 1);
-			cc.cy = 1 == (x & 1);
+			cc.cy = (1 == (x & 1));
 			break; 
 		case 0x10: break; // -
 		case 0x11: unimplementedInstruction(); break;
@@ -237,7 +237,11 @@ int State8080::Emulate8080p() {
 		case 0x14: inr(r.d); break; // INR E
 		case 0x15: dcr(r.d); break; // DCR D
 		case 0x16: unimplementedInstruction(); break;
-		case 0x17: unimplementedInstruction(); break;
+		case 0x17: // RAL
+			uint8_t x = r.a;
+			r.a = (x << 1) | cc.cy ;
+			cc.cy = (1 == (x&0x80));
+			break;
 
 		case 0x18: break; // -
 		case 0x19: dad((r.d << 8) | r.e); break; // DAD D
