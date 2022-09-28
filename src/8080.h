@@ -34,6 +34,7 @@ struct registers8080 {
 	reg_t l;
 };
 
+
 class State8080 {
 public:
 	registers8080 r;
@@ -61,6 +62,9 @@ private:
 
 	// data
 	void mov(uint8_t& r1, uint8_t r2);
+	void stax(uint8_t r1, uint8_t r2);
+	void lxi(uint8_t& r1, uint8_t& r2);
+	void ldax(uint8_t r1, uint8_t r2);
 
 	// logic
 	void ana(uint8_t other);
@@ -71,18 +75,31 @@ private:
 	void logicFlags(reg_t reg, uint8_t flags);
 
 	// branch
-	void jmp();
 	void jmp(uint8_t hi, uint8_t lo);
-	void call();
-	void ret();
+	void jmp(bool cond);
+	void call(bool cond);
+	void ret(bool cond);
 	void rst(uint16_t address);
 
+	// stack
+	void pop(uint8_t& r1, uint8_t& r2);
+	void push(uint8_t r1, uint8_t r2);
+	void popPSW();
+	void pushPSW();
+	void xthl();
+	void xchg();
+	
 	// flag helpers
 	int parity(int x, int size=8);
 	void auxCarry(uint16_t a, uint16_t b);
 
+
 	// get memory pos of HL
 	uint8_t& getHL();
+
+	uint8_t& getNextByte();
+	uint16_t getNextAddress();
+
 };
 
 }
